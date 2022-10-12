@@ -1,14 +1,9 @@
 use bincode;
+use pyo3::{prelude::*, types::PyBytes};
 use serde_json;
-use std::{fs, io};
-use std::collections::{
-    HashMap,
-};
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use pyo3::{
-    prelude::*,
-    types::PyBytes,
-};
+use std::{fs, io};
 
 extern crate corpusit;
 use corpusit::Vocab;
@@ -37,11 +32,25 @@ impl From<Vocab> for PyVocab {
 impl From<Arc<RwLock<Vocab>>> for PyVocab {
     fn from(vocab: Arc<RwLock<Vocab>>) -> Self {
         let vocab = vocab;
-        let s2i = S2I {vocab: Arc::clone(&vocab)};
-        let i2s = I2S {vocab: Arc::clone(&vocab)};
-        let counts = Counts {vocab: Arc::clone(&vocab)};
-        let i2count = I2Count {vocab: Arc::clone(&vocab)};
-        Self { vocab: Arc::clone(&vocab), s2i: s2i, i2s: i2s, counts: counts, i2count: i2count}
+        let s2i = S2I {
+            vocab: Arc::clone(&vocab),
+        };
+        let i2s = I2S {
+            vocab: Arc::clone(&vocab),
+        };
+        let counts = Counts {
+            vocab: Arc::clone(&vocab),
+        };
+        let i2count = I2Count {
+            vocab: Arc::clone(&vocab),
+        };
+        Self {
+            vocab: Arc::clone(&vocab),
+            s2i: s2i,
+            i2s: i2s,
+            counts: counts,
+            i2count: i2count,
+        }
     }
 }
 
@@ -58,6 +67,31 @@ impl PyVocab {
 
 #[pymethods]
 impl PyVocab {
+    #[args(unk = "None", other_special_name2str = "None")]
+    #[new]
+    pub fn new(
+        i2s: HashMap<usize, String>,
+        i2count: HashMap<usize, u64>,
+        unk: Option<String>,
+        other_special_name2str: Option<HashMap<String, String>>,
+    ) -> Self {
+        let mut other_special_name2str = other_special_name2str.unwrap_or(HashMap::default());
+        if let Some(unk_str) = unk {
+            other_special_name2str
+                .entry("unk".to_string())
+                .and_modify(|unk_s| {
+                    if unk_s.to_string() != unk_str {
+                        panic!(
+                            "You specified two different tokens (`{}` and `{}`) as {{unk}}.",
+                            &unk_str, unk_s
+                        );
+                    }
+                })
+                .or_insert(unk_str);
+        };
+        Self::from(Vocab::new(i2s, i2count, other_special_name2str))
+    }
+
     /// Read a Vocab stored in a json file at `path_to_json`
     /// Parameters
     ///   - min_count: set a new count threshold. All words with smaller
@@ -115,10 +149,8 @@ impl PyVocab {
     ///   - path_to_save_bin: if not specified, will save at
     ///         ${path_to_corpus}.vocab.bin
     #[args(min_count = "5", max_size = "None", unk = "\"<unk>\"")]
-    #[pyo3(
-        text_signature = "(path_to_corpus, min_count=None, max_size=None, \
-                          unk=None, path_to_save_json=None, path_to_save_bin=None)"
-    )]
+    #[pyo3(text_signature = "(path_to_corpus, min_count=None, max_size=None, \
+                          unk=None, path_to_save_json=None, path_to_save_bin=None)")]
     #[staticmethod]
     pub fn build(
         path_to_corpus: &str,
@@ -175,15 +207,21 @@ impl PyVocab {
 
     pub fn counts_dict(slf: PyRef<Self>) -> HashMap<String, u64> {
         let vocab = slf.vocab.read().unwrap();
-        vocab.i2count.iter().map(|(i, c)| {
-            (vocab.i2s[i].clone(), *c)
-        }).collect()
+        vocab
+            .i2count
+            .iter()
+            .map(|(i, c)| (vocab.i2s[i].clone(), *c))
+            .collect()
     }
 
     pub fn get_special_tokens(slf: PyRef<Self>) -> HashMap<String, String> {
-        slf.vocab.read().unwrap().special_name2i.iter().map(|(name, id)| {
-            (name.to_string(), slf.vocab.read().unwrap().i2s[id].clone())
-        }).collect()
+        slf.vocab
+            .read()
+            .unwrap()
+            .special_name2i
+            .iter()
+            .map(|(name, id)| (name.to_string(), slf.vocab.read().unwrap().i2s[id].clone()))
+            .collect()
     }
 
     pub fn __contains__(slf: PyRef<Self>, s: &str) -> bool {
@@ -194,7 +232,13 @@ impl PyVocab {
     }
 
     pub fn keys(slf: PyRef<Self>) -> Vec<String> {
-        slf.vocab.read().unwrap().s2i.keys().map(|s| s.to_string()).collect()
+        slf.vocab
+            .read()
+            .unwrap()
+            .s2i
+            .keys()
+            .map(|s| s.to_string())
+            .collect()
     }
 
     pub fn __repr__(slf: PyRef<Self>) -> String {
@@ -205,12 +249,20 @@ impl PyVocab {
         }
         special_tokens_str.pop();
         special_tokens_str.pop();
-        format!("<Vocab(size={}, special_tokens={{{}}})", vocab.i2s.len(), special_tokens_str)
+        format!(
+            "<Vocab(size={}, special_tokens={{{}}})",
+            vocab.i2s.len(),
+            special_tokens_str
+        )
     }
 
     #[getter]
     pub fn unk(slf: PyRef<Self>) -> Option<String> {
-        slf.vocab.read().unwrap().unk_str().and_then(|s| Some(s.to_string()))
+        slf.vocab
+            .read()
+            .unwrap()
+            .unk_str()
+            .and_then(|s| Some(s.to_string()))
     }
 
     #[getter]
@@ -237,9 +289,7 @@ impl PyVocab {
     pub fn __getstate__(&self, py: Python) -> PyResult<PyObject> {
         Ok(PyBytes::new(py, &bincode::serialize(&self.vocab).unwrap()).to_object(py))
     }
-
 }
-
 
 #[derive(Clone)]
 #[pyclass]
@@ -268,7 +318,12 @@ pub struct Counts {
 #[pymethods]
 impl S2I {
     pub fn __getitem__(slf: PyRef<Self>, s: &str) -> Option<usize> {
-        slf.vocab.read().unwrap().s2i.get(s).and_then(|id| Some(*id))
+        slf.vocab
+            .read()
+            .unwrap()
+            .s2i
+            .get(s)
+            .and_then(|id| Some(*id))
     }
 
     pub fn get(slf: PyRef<Self>, s: &str, default: usize) -> usize {
@@ -286,7 +341,12 @@ impl S2I {
 #[pymethods]
 impl I2S {
     pub fn __getitem__(slf: PyRef<Self>, id: usize) -> Option<String> {
-        slf.vocab.read().unwrap().i2s.get(&id).and_then(|s| Some(s.to_string()))
+        slf.vocab
+            .read()
+            .unwrap()
+            .i2s
+            .get(&id)
+            .and_then(|s| Some(s.to_string()))
     }
 
     pub fn get(slf: PyRef<Self>, id: usize, default: String) -> String {
@@ -304,7 +364,12 @@ impl I2S {
 #[pymethods]
 impl I2Count {
     pub fn __getitem__(slf: PyRef<Self>, id: usize) -> Option<u64> {
-        slf.vocab.read().unwrap().i2count.get(&id).and_then(|c| Some(*c))
+        slf.vocab
+            .read()
+            .unwrap()
+            .i2count
+            .get(&id)
+            .and_then(|c| Some(*c))
     }
 
     pub fn get(slf: PyRef<Self>, id: usize, default: u64) -> u64 {
@@ -323,9 +388,7 @@ impl I2Count {
 impl Counts {
     pub fn __getitem__(slf: PyRef<Self>, s: &str) -> Option<u64> {
         let vocab = slf.vocab.read().unwrap();
-        vocab.s2i.get(s).and_then(|id| {
-            Some(vocab.i2count[id])
-        })
+        vocab.s2i.get(s).and_then(|id| Some(vocab.i2count[id]))
     }
 
     pub fn get(slf: PyRef<Self>, s: &str, default: u64) -> u64 {

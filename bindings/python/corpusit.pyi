@@ -16,6 +16,27 @@ class Vocab:
     """ mapping from word string to count"""
     counts: Mapping[str, int]
 
+    def __init__(
+        self,
+        i2s: Mapping[int, str],
+        i2count: Mapping[int, int],
+        unk: str = None,
+        other_special_name2str: Mapping[str, str] = None,
+    ) -> Vocab:
+        """Create a vocabulary.
+
+        Args:
+            i2s (Mapping[int, str]): mapping from word index to string
+            i2count (Mapping[int, int]): mapping from word index to count
+            unk (str, optional): The `unknown` word. Defaults to None.
+            other_special_name2str (Mapping[str, str], optional):
+                Special words in addition to `unk`, a mapping from
+                name (`eos`, etc.) to word string (e.g., `<eos>`).
+                Defaults to None.
+
+        Returns:
+            Vocab
+        """
     @staticmethod
     def from_json(
         path_to_json, min_count: int = None, max_size: int = None, unk: str = None
@@ -149,7 +170,7 @@ class SkipGramDataset:
             - n_neg (int, optional): how many negative samples for one positive sample.
                 Defaults to 1.
         """
-    def positive_sampler(self, batch_size: int , seed: uint = 0, num_threads: uint = 4):
+    def positive_sampler(self, batch_size: int, seed: uint = 0, num_threads: uint = 4):
         """Create an iterable (maybe multi-thread) sampler for generating "positive" samples.
         The sampler returns a numpy 2-d array of shape (batch_size, 2) in each iteration,
         where each row is a pair of word indices.
@@ -184,16 +205,24 @@ class SkipGramIter:
 
 class S2I:
     """A Mapping from word string to index."""
-    def get(self, s: str, default) -> int: pass
+
+    def get(self, s: str, default) -> int:
+        pass
 
 class I2S:
     """A Mapping from word index to string."""
-    def get(self, i: int, default) -> str: pass
+
+    def get(self, i: int, default) -> str:
+        pass
 
 class I2Count:
     """A Mapping from word index to count."""
-    def get(self, i: int, default) -> int: pass
+
+    def get(self, i: int, default) -> int:
+        pass
 
 class Counts:
     """A Mapping from word str to count."""
-    def get(self, s: str, default) -> int: pass
+
+    def get(self, s: str, default) -> int:
+        pass

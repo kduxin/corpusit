@@ -70,10 +70,7 @@ impl VocabBuilder {
                     }
                     counts
                 })
-                .reduce(
-                    || HashMap::<String, u64>::new(),
-                    _merge_counts,
-                );
+                .reduce(|| HashMap::<String, u64>::new(), _merge_counts);
             wordcounts = _merge_counts(wordcounts, chunk_counts);
         }
 
@@ -148,6 +145,34 @@ pub struct Vocab {
 }
 
 impl Vocab {
+    pub fn new(
+        i2s: HashMap<usize, String>,
+        i2count: HashMap<usize, u64>,
+        special_name2str: HashMap<String, String>,
+    ) -> Self {
+        let s2i: HashMap<String, usize> = i2s.iter().map(|(id, s)| (s.to_string(), *id)).collect();
+        let totalcount: u64 = i2count.iter().map(|(_, c)| *c).sum();
+        let special_name2i: HashMap<String, usize> = special_name2str
+            .iter()
+            .map(|(name, s)| {
+                (
+                    name.to_string(),
+                    match s2i.get(s) {
+                        Some(id) => *id,
+                        None => panic!("Special token `{}` not found in vocabulary.", s),
+                    },
+                )
+            })
+            .collect();
+        Self {
+            i2s: i2s,
+            s2i: s2i,
+            i2count: i2count,
+            totalcount: totalcount,
+            special_name2i: special_name2i,
+        }
+    }
+
     pub fn unk(&self) -> Option<(&str, usize)> {
         self.special_name2i
             .get("unk")
@@ -236,7 +261,6 @@ impl Vocab {
     }
 
     pub fn truncate(&mut self, min_count: u64, max_size: usize) {
-
         let mut trun_i2count: HashMap<usize, u64> = HashMap::new();
         self.special_name2i.iter().for_each(|(_, id)| {
             trun_i2count.insert(*id, self.i2count[id]);
@@ -248,7 +272,6 @@ impl Vocab {
         let mut sorted_i2count: Vec<(usize, u64)> = self.i2count.clone().into_iter().collect();
         sorted_i2count.sort_by(|(_, c1), (_, c2)| (u64::MAX - *c1).cmp(&(u64::MAX - *c2)));
         for (id, c) in sorted_i2count.iter() {
-
             if special_ids.contains(id) {
                 continue;
             }
