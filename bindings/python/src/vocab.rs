@@ -67,7 +67,12 @@ impl PyVocab {
 
 #[pymethods]
 impl PyVocab {
-    #[args(unk = "None", other_special_name2str = "None")]
+    #[args(
+        i2s = "HashMap::new()",
+        i2count = "HashMap::new()",
+        unk = "None",
+        other_special_name2str = "None"
+    )]
     #[new]
     pub fn new(
         i2s: HashMap<usize, String>,

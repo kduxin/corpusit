@@ -1,6 +1,6 @@
 [package]
 name = "corpusit-python"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["duxin.ac@gmail.com"]
 edition = "2021"
 
