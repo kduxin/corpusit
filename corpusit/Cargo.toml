@@ -26,7 +26,3 @@ tqdm = "0.4.2"
 
 [dev-dependencies]
 criterion = "0.3"
-
-[[bench]]
-name = "my_benchmark"
-harness = false
