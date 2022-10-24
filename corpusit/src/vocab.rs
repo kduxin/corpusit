@@ -306,3 +306,50 @@ where
     });
     c1
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::vocab::Vocab;
+    use std::collections::HashMap;
+
+    #[test]
+    fn basics() {
+        let mut vocab = Vocab::default();
+        let special_tokens: HashMap<String, String> = [
+            ("unk", "<unk>")
+        ].into_iter().map(|(s1, s2)| {(s1.to_string(), s2.to_string())}).collect();
+        let wordcounts: HashMap<String, u64> = [
+            ("apple", 100),
+            ("pear", 50),
+            ("bank", 10),
+            ("infreq", 3),
+        ].into_iter().map(|(s1, s2)| {(s1.to_string(), s2)}).collect();
+
+        // No unk
+        vocab.append_wordcounts(wordcounts);
+        assert!(vocab.get_id_by_str("none").is_none());
+        assert!(vocab.get_str_by_id(&999).is_none());
+
+        // With unk
+        vocab.append_special_tokens(special_tokens);
+        assert_eq!(vocab.i2count[&vocab.s2i["apple"]], 100);
+        assert_eq!(vocab.i2count[&vocab.s2i["pear"]], 50);
+        assert_eq!(vocab.i2count[&vocab.s2i["bank"]], 10);
+        assert_eq!(vocab.i2count[&vocab.s2i["infreq"]], 3);
+        
+        // Remove `infreq`
+        vocab.truncate(5, usize::MAX);
+        assert!(!vocab.s2i.contains_key("infreq"));
+        assert_eq!(vocab.i2count[&vocab.s2i["<unk>"]], 3);
+
+        // Remove `bank`
+        vocab.truncate(1, 3);
+        assert!(!vocab.s2i.contains_key("bank"));
+        assert!(vocab.get_id_by_str("none").is_some());
+        assert_eq!(*vocab.get_id_by_str("bank").unwrap(), vocab.s2i["<unk>"]);
+        assert!(vocab.get_str_by_id(&999).is_some());
+        assert_eq!(vocab.get_str_by_id(&999).unwrap(), "<unk>");
+        assert_eq!(vocab.i2count[&vocab.s2i["<unk>"]], 13);
+    }
+}
