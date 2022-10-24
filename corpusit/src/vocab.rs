@@ -209,12 +209,17 @@ impl Vocab {
 
     #[inline]
     pub fn get_id_by_str(&self, s: &str) -> Option<&usize> {
-        self.s2i.get(s)
+        self.s2i.get(s).or_else(|| {
+            self.unk_id()
+        })
     }
 
     #[inline]
     pub fn get_str_by_id(&self, id: &usize) -> Option<&str> {
         self.i2s.get(id).and_then(|s| Some(s.as_str()))
+        .or_else(|| {
+            self.unk_str()
+        })
     }
 
     fn append_special_tokens(&mut self, special_tokens: HashMap<String, String>) {
