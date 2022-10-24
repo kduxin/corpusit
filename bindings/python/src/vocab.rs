@@ -1,9 +1,7 @@
 use bincode;
 use pyo3::{prelude::*, types::PyBytes};
-use serde_json;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use std::{fs, io};
 
 extern crate corpusit;
 use corpusit::Vocab;
@@ -54,17 +52,6 @@ impl From<Arc<RwLock<Vocab>>> for PyVocab {
     }
 }
 
-impl PyVocab {
-    fn update(&mut self, min_count: Option<u64>, max_size: Option<usize>, unk: Option<&str>) {
-        if let Some(unk) = unk {
-            self.vocab.write().unwrap().unk_(&unk);
-        }
-        let min_count = min_count.unwrap_or(1);
-        let max_size = max_size.unwrap_or(usize::MAX);
-        self.vocab.write().unwrap().truncate(min_count, max_size);
-    }
-}
-
 #[pymethods]
 impl PyVocab {
     #[args(
@@ -112,12 +99,7 @@ impl PyVocab {
         max_size: Option<usize>,
         unk: Option<&str>,
     ) -> Self {
-        let vocab_f = fs::File::open(path_to_json).unwrap();
-        let vocab_f = io::BufReader::new(vocab_f);
-        let vocab: corpusit::Vocab = serde_json::from_reader(vocab_f).unwrap();
-        let mut pyvocab = Self::from(vocab);
-        pyvocab.update(min_count, max_size, unk);
-        pyvocab
+        Self::from(Vocab::from_json(&path_to_json, min_count, max_size, unk))
     }
 
     /// Read a Vocab stored in a binary file at `path_to_bin`
@@ -135,12 +117,7 @@ impl PyVocab {
         max_size: Option<usize>,
         unk: Option<&str>,
     ) -> Self {
-        let vocab_f = fs::File::open(path_to_bin).unwrap();
-        let vocab_f = io::BufReader::new(vocab_f);
-        let vocab: corpusit::Vocab = bincode::deserialize_from(vocab_f).unwrap();
-        let mut pyvocab = Self::from(vocab);
-        pyvocab.update(min_count, max_size, unk);
-        pyvocab
+        Self::from(Vocab::from_bin(&path_to_bin, min_count, max_size, unk))
     }
 
     /// Build a Vocab by with a corpus at `path_to_corpus`
@@ -173,21 +150,19 @@ impl PyVocab {
         }
         let mut vocab = vocab_builder.build();
 
+        // Save the vocab in format of JSON
         let vocab_path = match path_to_save_json {
             Some(path) => path.to_string(),
             None => path_to_corpus.to_string() + ".vocab.json",
         };
-        let vocab_f = fs::File::create(vocab_path).unwrap();
-        let vocab_f = io::BufWriter::new(vocab_f);
-        serde_json::to_writer_pretty(vocab_f, &vocab).unwrap();
+        vocab.to_json(&vocab_path);
 
+        // Save the vocab in format of binary
         let vocab_path = match path_to_save_bin {
             Some(path) => path.to_string(),
             None => path_to_corpus.to_string() + ".vocab.bin",
         };
-        let vocab_f = fs::File::create(vocab_path).unwrap();
-        let vocab_f = io::BufWriter::new(vocab_f);
-        bincode::serialize_into(vocab_f, &vocab).unwrap();
+        vocab.to_bin(&vocab_path);
 
         vocab.truncate(min_count, max_size);
         Self::from(vocab)

@@ -3,7 +3,7 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, BufWriter};
 use std::ops::{Add, AddAssign};
 use tqdm::Iter;
 
@@ -293,7 +293,61 @@ impl Vocab {
             .map(|(id, _)| (self.i2s[id].to_string(), *id))
             .collect();
     }
+
+    pub fn update(&mut self, min_count: Option<u64>, max_size: Option<usize>, unk: Option<&str>) {
+        if let Some(unk) = unk {
+            self.unk_(&unk);
+        }
+        let min_count = min_count.unwrap_or(1);
+        let max_size = max_size.unwrap_or(usize::MAX);
+        self.truncate(min_count, max_size);
+    }
+
+    pub fn from_json(
+        path_to_json: &str,
+        min_count: Option<u64>,
+        max_size: Option<usize>,
+        unk: Option<&str>,
+    ) -> Self {
+        let vocab_f = File::open(path_to_json).unwrap();
+        let vocab_f = BufReader::new(vocab_f);
+        let mut vocab: Self = serde_json::from_reader(vocab_f).unwrap();
+        vocab.update(min_count, max_size, unk);
+        vocab
+    }
+
+    pub fn from_bin(
+        path_to_bin: &str,
+        min_count: Option<u64>,
+        max_size: Option<usize>,
+        unk: Option<&str>,
+    ) -> Self {
+        let vocab_f = File::open(path_to_bin).unwrap();
+        let vocab_f = BufReader::new(vocab_f);
+        let mut vocab: Vocab = bincode::deserialize_from(vocab_f).unwrap();
+        vocab.update(min_count, max_size, unk);
+        vocab
+    }
+
+    pub fn to_json(&self, path: &str) {
+        let vocab_f = File::create(path).unwrap();
+        let vocab_f = BufWriter::new(vocab_f);
+        serde_json::to_writer_pretty(vocab_f, self).unwrap();
+    }
+
+    pub fn to_bin(&self, path: &str) {
+        let vocab_f = File::create(path).unwrap();
+        let vocab_f = BufWriter::new(vocab_f);
+        bincode::serialize_into(vocab_f, self).unwrap();
+    }
+
+    pub fn len(&self) -> usize {
+        self.i2s.len()
+    }
+
 }
+
+
 
 fn _merge_counts<T>(mut c1: HashMap<String, T>, c2: HashMap<String, T>) -> HashMap<String, T>
 where
