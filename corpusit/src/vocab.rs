@@ -252,11 +252,6 @@ impl Vocab {
                 }
             }
 
-            if self.s2i.contains_key(word) {
-                let id = self.s2i[word];
-                self.i2count.entry(id).and_modify(|c| *c += count);
-                continue;
-            }
         }
     }
 
