@@ -50,6 +50,8 @@ class Vocab:
             - max_size: set a new vocabulary size limit.
             - unk: set / reset the {unk} token.
         """
+    def to_json(path_to_json):
+        """Save a Vocab as a JSON file"""
     @staticmethod
     def from_bin(
         path_to_bin, min_count: int = None, max_size: int = None, unk: str = None
@@ -63,6 +65,8 @@ class Vocab:
             - max_size: set a new vocabulary size limit.
             - unk: set / reset the {unk} token.
         """
+    def to_bin(path_to_bin):
+        """Save a Vocab as a binary file"""
     @staticmethod
     def build(
         path_to_corpus,

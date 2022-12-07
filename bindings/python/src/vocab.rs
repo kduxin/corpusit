@@ -102,6 +102,12 @@ impl PyVocab {
         Self::from(Vocab::from_json(&path_to_json, min_count, max_size, unk))
     }
 
+    /// Save a Vocab as a JSON file
+    #[pyo3(text_signature = "(path_to_json)")]
+    pub fn to_json(slf: PyRef<Self>, path_to_json: String) {
+        slf.vocab.read().unwrap().to_json(&path_to_json);
+    }
+
     /// Read a Vocab stored in a binary file at `path_to_bin`
     /// Parameters
     ///   - min_count: set a new count threshold. All words with smaller
@@ -118,6 +124,12 @@ impl PyVocab {
         unk: Option<&str>,
     ) -> Self {
         Self::from(Vocab::from_bin(&path_to_bin, min_count, max_size, unk))
+    }
+
+    /// Save a Vocab as a binary file
+    #[pyo3(text_signature = "(path_to_bin)")]
+    pub fn to_bin(slf: PyRef<Self>, path_to_bin: String) {
+        slf.vocab.read().unwrap().to_bin(&path_to_bin);
     }
 
     /// Build a Vocab by with a corpus at `path_to_corpus`
@@ -230,7 +242,7 @@ impl PyVocab {
         special_tokens_str.pop();
         special_tokens_str.pop();
         format!(
-            "<Vocab(size={}, special_tokens={{{}}})",
+            "<Vocab(size={}, special_tokens={{{}}})>",
             vocab.i2s.len(),
             special_tokens_str
         )

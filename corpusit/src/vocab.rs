@@ -209,17 +209,15 @@ impl Vocab {
 
     #[inline]
     pub fn get_id_by_str(&self, s: &str) -> Option<&usize> {
-        self.s2i.get(s).or_else(|| {
-            self.unk_id()
-        })
+        self.s2i.get(s).or_else(|| self.unk_id())
     }
 
     #[inline]
     pub fn get_str_by_id(&self, id: &usize) -> Option<&str> {
-        self.i2s.get(id).and_then(|s| Some(s.as_str()))
-        .or_else(|| {
-            self.unk_str()
-        })
+        self.i2s
+            .get(id)
+            .and_then(|s| Some(s.as_str()))
+            .or_else(|| self.unk_str())
     }
 
     fn append_special_tokens(&mut self, special_tokens: HashMap<String, String>) {
@@ -256,7 +254,6 @@ impl Vocab {
                     self.totalcount += count;
                 }
             }
-
         }
     }
 
@@ -344,10 +341,7 @@ impl Vocab {
     pub fn len(&self) -> usize {
         self.i2s.len()
     }
-
 }
-
-
 
 fn _merge_counts<T>(mut c1: HashMap<String, T>, c2: HashMap<String, T>) -> HashMap<String, T>
 where
@@ -361,7 +355,6 @@ where
     c1
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::vocab::Vocab;
@@ -370,15 +363,15 @@ mod tests {
     #[test]
     fn basics() {
         let mut vocab = Vocab::default();
-        let special_tokens: HashMap<String, String> = [
-            ("unk", "<unk>")
-        ].into_iter().map(|(s1, s2)| {(s1.to_string(), s2.to_string())}).collect();
-        let wordcounts: HashMap<String, u64> = [
-            ("apple", 100),
-            ("pear", 50),
-            ("bank", 10),
-            ("infreq", 3),
-        ].into_iter().map(|(s1, s2)| {(s1.to_string(), s2)}).collect();
+        let special_tokens: HashMap<String, String> = [("unk", "<unk>")]
+            .into_iter()
+            .map(|(s1, s2)| (s1.to_string(), s2.to_string()))
+            .collect();
+        let wordcounts: HashMap<String, u64> =
+            [("apple", 100), ("pear", 50), ("bank", 10), ("infreq", 3)]
+                .into_iter()
+                .map(|(s1, s2)| (s1.to_string(), s2))
+                .collect();
 
         // No unk
         vocab.append_wordcounts(wordcounts);
@@ -391,7 +384,7 @@ mod tests {
         assert_eq!(vocab.i2count[&vocab.s2i["pear"]], 50);
         assert_eq!(vocab.i2count[&vocab.s2i["bank"]], 10);
         assert_eq!(vocab.i2count[&vocab.s2i["infreq"]], 3);
-        
+
         // Remove `infreq`
         vocab.truncate(5, usize::MAX);
         assert!(!vocab.s2i.contains_key("infreq"));
