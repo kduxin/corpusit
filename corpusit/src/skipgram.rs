@@ -293,31 +293,31 @@ pub struct SGDatasetBuilder {
 }
 
 impl SGDatasetBuilder {
-    pub fn new(config: SGDatasetConfig) -> SGDatasetBuilder {
+    pub fn new(config: SGDatasetConfig) -> Self {
         SGDatasetBuilder { config: config }
     }
 
-    #[must_use]
-    pub fn corpus_path_(mut self, corpus_path: &str) -> Self {
-        self.config.corpus_path = corpus_path.to_string();
-        self
-    }
+    // #[must_use]
+    // pub fn corpus_path_(mut self, corpus_path: &str) -> Self {
+    //     self.config.corpus_path = corpus_path.to_string();
+    //     self
+    // }
 
-    #[must_use]
-    pub fn win_size_(mut self, win_size: usize) -> Self {
-        self.config.win_size = win_size;
-        self
-    }
+    // #[must_use]
+    // pub fn win_size_(mut self, win_size: usize) -> Self {
+    //     self.config.win_size = win_size;
+    //     self
+    // }
 
-    pub fn sep_<P>(mut self, sep: Sep) -> Self {
-        self.config.sep = sep;
-        self
-    }
+    // pub fn sep_<P>(mut self, sep: Sep) -> Self {
+    //     self.config.sep = sep;
+    //     self
+    // }
 
-    pub fn mode_(mut self, mode: FileIterateMode) -> Self {
-        self.config.mode = mode;
-        self
-    }
+    // pub fn mode_(mut self, mode: FileIterateMode) -> Self {
+    //     self.config.mode = mode;
+    //     self
+    // }
 
     pub fn build_with_vocab(&self, vocab: &Vocab) -> SGDataset {
         SGDataset {
@@ -328,8 +328,7 @@ impl SGDatasetBuilder {
     }
 
     pub fn build(&self) -> SGDataset {
-        let vocab_builder = VocabBuilder::new(&self.config.corpus_path);
-        let vocab = vocab_builder.build();
+        let vocab = VocabBuilder::new(&self.config.corpus_path).build();
         let sgprobs = SGProbs::new(&vocab, &self.config);
         SGDataset {
             config: Arc::new(RwLock::new(self.config.clone())),
@@ -348,12 +347,12 @@ pub struct SGDataset {
 }
 
 impl SGDataset {
-    pub fn new(config: SGDatasetConfig) -> Arc<Self> {
-        Arc::new(SGDatasetBuilder::new(config).build())
+    pub fn new(config: SGDatasetConfig) -> Self {
+        SGDatasetBuilder::new(config).build()
     }
 
-    pub fn new_with_vocab(config: SGDatasetConfig, vocab: &Vocab) -> Arc<Self> {
-        Arc::new(SGDatasetBuilder::new(config).build_with_vocab(vocab))
+    pub fn new_with_vocab(config: SGDatasetConfig, vocab: &Vocab) -> Self {
+        SGDatasetBuilder::new(config).build_with_vocab(vocab)
     }
 
     pub fn positive_sampler(&self, seed: u64, num_threads: usize) -> SGDatasetPosIter {
@@ -703,7 +702,7 @@ mod tests {
         assert_eq!(samples1, samples2);
     }
 
-    fn load_vocab_and_dataset(mode: FileIterateMode) -> (Vocab, Arc<SGDataset>) {
+    fn load_vocab_and_dataset(mode: FileIterateMode) -> (Vocab, SGDataset) {
         let mut path = path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("data/corpus.txt");
         let path: String = path.to_string_lossy().into();

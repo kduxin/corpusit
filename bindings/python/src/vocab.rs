@@ -54,12 +54,7 @@ impl From<Arc<RwLock<Vocab>>> for PyVocab {
 
 #[pymethods]
 impl PyVocab {
-    #[args(
-        i2s = "HashMap::new()",
-        i2count = "HashMap::new()",
-        unk = "None",
-        other_special_name2str = "None"
-    )]
+    #[pyo3(signature = (i2s = HashMap::new(), i2count = HashMap::new(), unk = None, other_special_name2str = None))]
     #[new]
     pub fn new(
         i2s: HashMap<usize, String>,
@@ -90,8 +85,7 @@ impl PyVocab {
     ///         counts are truncated, and viewed as {unk}.
     ///   - max_size: set a new vocabulary size limit.
     ///   - unk: set / reset the {unk} token.
-    #[args(min_count = "None", max_size = "None", unk = "None")]
-    #[pyo3(text_signature = "(path_to_json, min_count=None, max_size=None, unk=None)")]
+    #[pyo3(signature = (path_to_json, min_count = None, max_size = None, unk = None))]
     #[staticmethod]
     pub fn from_json(
         path_to_json: String,
@@ -114,8 +108,7 @@ impl PyVocab {
     ///         counts are truncated, and viewed as {unk}.
     ///   - max_size: set a new vocabulary size limit.
     ///   - unk: set / reset the {unk} token.
-    #[args(min_count = "None", max_size = "None", unk = "None")]
-    #[pyo3(text_signature = "(path_to_bin, min_count=None, max_size=None, unk=None)")]
+    #[pyo3(signature = (path_to_bin, min_count = None, max_size = None, unk = None))]
     #[staticmethod]
     pub fn from_bin(
         path_to_bin: String,
@@ -142,9 +135,7 @@ impl PyVocab {
     ///         ${path_to_corpus}.vocab.json
     ///   - path_to_save_bin: if not specified, will save at
     ///         ${path_to_corpus}.vocab.bin
-    #[args(min_count = "5", max_size = "None", unk = "\"<unk>\"")]
-    #[pyo3(text_signature = "(path_to_corpus, min_count=None, max_size=None, \
-                          unk=None, path_to_save_json=None, path_to_save_bin=None)")]
+    #[pyo3(signature = (path_to_corpus, min_count = 5, max_size = None, unk = "<unk>", path_to_save_json = None, path_to_save_bin = None))]
     #[staticmethod]
     pub fn build(
         path_to_corpus: &str,
@@ -263,7 +254,7 @@ impl PyVocab {
     }
 
     pub fn __setstate__(&mut self, py: Python, state: PyObject) -> PyResult<()> {
-        match state.extract::<&PyBytes>(py) {
+        match state.extract::<Bound<PyBytes>>(py) {
             Ok(s) => {
                 let saved: Vocab = bincode::deserialize(s.as_bytes()).unwrap();
                 let tmp = PyVocab::from(saved);
@@ -279,7 +270,7 @@ impl PyVocab {
     }
 
     pub fn __getstate__(&self, py: Python) -> PyResult<PyObject> {
-        Ok(PyBytes::new(py, &bincode::serialize(&self.vocab).unwrap()).to_object(py))
+        Ok(PyBytes::new_bound(py, &bincode::serialize(&self.vocab).unwrap()).to_object(py))
     }
 }
 

@@ -27,14 +27,7 @@ impl From<SGDataset> for PySGDataset {
 
 #[pymethods]
 impl PySGDataset {
-    #[args(
-        win_size = "10",
-        sep = "\" \"",
-        mode = "\"shuffle\"",
-        subsample = "1e-5",
-        power = "0.75",
-        n_neg = "1"
-    )]
+    #[pyo3(signature = (path_to_corpus, vocab, win_size = 10, sep = " ", mode = "shuffle", subsample = 1e-5, power = 0.75, n_neg = 1))]
     #[new]
     fn new(
         path_to_corpus: &str,
@@ -64,8 +57,7 @@ impl PySGDataset {
         Self { dataset: dataset }
     }
 
-    #[args(seed = "0", num_threads = "4")]
-    #[pyo3(text_signature = "(self, batch_size, seed=0, num_threads=4)")]
+    #[pyo3(signature = (batch_size, seed = 0, num_threads = 4))]
     pub fn positive_sampler(
         &self,
         batch_size: usize,
@@ -78,8 +70,7 @@ impl PySGDataset {
         }
     }
 
-    #[args(seed = "0", num_threads = "4")]
-    #[pyo3(text_signature = "(self, batch_size, seed=0, num_threads=4)")]
+    #[pyo3(signature = (batch_size, seed = 0, num_threads = 4))]
     pub fn sampler(
         &self,
         batch_size: usize,
@@ -123,8 +114,8 @@ impl PySGDatasetPosIter {
                 }
 
                 let res = Python::with_gil(|py| {
-                    let y = PyArray2::from_owned_array(py, arr);
-                    y.to_owned()
+                    let y = PyArray2::from_owned_array_bound(py, arr);
+                    y.to_owned().into()
                 });
                 Some(res)
             }
@@ -164,8 +155,8 @@ impl PySGDatasetIter {
 
                 Python::with_gil(|py| {
                     Some((
-                        PyArray2::from_owned_array(py, pairs).to_owned(),
-                        PyArray1::from_owned_array(py, labels).to_owned(),
+                        PyArray2::from_owned_array_bound(py, pairs).to_owned().into(),
+                        PyArray1::from_owned_array_bound(py, labels).to_owned().into(),
                     ))
                 })
             }
