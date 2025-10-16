@@ -4,6 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "corpusit"
+version = "0.2.0"
 authors = [
     {email = "duxin.ac@gmail.com"},
     {name = "Xin Du"},
