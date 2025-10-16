@@ -26,62 +26,85 @@ executing `pip install corpusit`.
 
 # Usage
 
-## SkipGram
+## SkipGram with Positive Sampling
 
-Each line in the corpus file is a document, and the tokens should be separated by whitespace.
+Process tokenized sequences to generate positive SkipGram pairs:
 
 ```python
 import corpusit
+import numpy as np
 
-corpus_path = 'corpusit/data/corpus.txt'
-vocab = corpusit.Vocab.build(corpus_path, min_count=1, unk='<unk>')
+# Create word counts mapping (word_id -> count)
+word_counts = {0: 100, 1: 50, 2: 200, 3: 75, 4: 150}
 
-dataset = corpusit.SkipGramDataset(
-    path_to_corpus=corpus_path,
-    vocab=vocab,
-    win_size=10,
-    sep=" ",
-    mode="onepass",       # onepass | repeat | shuffle
+# Create SkipGram configuration
+config = corpusit.SkipGramConfig(
+    word_counts=word_counts,
+    win_size=5,
     subsample=1e-3,
     power=0.75,
-    n_neg=1,
+    n_neg=1
 )
 
-it = dataset.positive_sampler(batch_size=100, seed=0, num_threads=4)
+# Create positive sampler
+sampler = config.positive_sampler(seed=0)
 
-for i, pair in enumerate(it):
-    print(f'Iter {i:>4d}, shape={pair.shape}. First pair: '
-          f'{pair[0,0]:>5} ({vocab.i2s[pair[0,0]]:>10}), '
-          f'{pair[0,1]:>5} ({vocab.i2s[pair[0,1]]:>10})')
-
-# Return:
-# Iter    0, shape=(100, 2). First pair:    14 (        is),    10 ( anarchism)
-# Iter    1, shape=(100, 2). First pair:     8 (        to),   540 (      and/)
-# Iter    2, shape=(100, 2). First pair:   775 (constitutes),    34 (anarchists)
-# Iter    3, shape=(100, 2). First pair:    72 (     other),   214 (  criteria)
-# Iter    4, shape=(100, 2). First pair:   650 (  defining),   487 ( companion)
-# ...
+# Process a sequence of word IDs
+sequence = [0, 1, 2, 3, 4, 1, 2, 0]
+pairs = sampler.process_sequence(sequence)
+print(f'Generated {len(pairs)} positive pairs')
+print(f'Shape: {pairs.shape}')
+print(f'First few pairs: {pairs[:3]}')
 ```
 
+## SkipGram with Negative Sampling
 
-## SkipGram with negative sampling
+Generate both positive and negative samples with labels:
+
 ```python
-it = dataset.sampler(100, seed=0, num_threads=4)
+# Create sampler with negative sampling
+sampler = config.sampler(seed=0, num_threads=4)
 
-for i, res in enumerate(it):
-    pair, label = res
-    print(f'Iter {i:>4d}, shape={pair.shape}. First pair: '
-          f'{pair[0,0]:>5} ({vocab.i2s[pair[0,0]]:>10}), '
-          f'{pair[0,1]:>5} ({vocab.i2s[pair[0,1]]:>10}), '
-          f'label = {label[0]}')
+# Process sequences
+sequences = [[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 0]]
+pairs, labels = sampler.process_sequences(sequences)
 
-# Returns:
-# Iter    0, shape=(200, 2). First pair:    15 (        is),    10 ( anarchism), label = True
-# Iter    1, shape=(200, 2). First pair:     9 (        to),   722 (      and/), label = True
-# Iter    2, shape=(200, 2). First pair:   389 (constitutes),    34 (anarchists), label = True
-# Iter    3, shape=(200, 2). First pair:    73 (     other),   212 (  criteria), label = True
-# Iter    4, shape=(200, 2). First pair:   445 (  defining),   793 ( companion), label = True
-# ...
+print(f'Generated {len(pairs)} samples')
+print(f'Pairs shape: {pairs.shape}')
+print(f'Labels shape: {labels.shape}')
+print(f'Positive samples: {np.sum(labels)}')
+print(f'Negative samples: {np.sum(~labels)}')
+```
+
+## SkipGram with Tokenization
+
+Process raw text sequences with automatic tokenization:
+
+```python
+# Create configuration with tokenization support
+word_counts = {0: 100, 1: 50, 2: 200, 3: 75, 4: 150}
+word_to_id = {"hello": 0, "world": 1, "python": 2, "rust": 3, "fast": 4}
+
+config = corpusit.SkipGramConfigWithTokenization(
+    word_counts=word_counts,
+    word_to_id=word_to_id,
+    separator=" ",
+    win_size=5,
+    subsample=1e-3,
+    power=0.75,
+    n_neg=1
+)
+
+# Create sampler
+sampler = config.sampler(seed=0, num_threads=4)
+
+# Process raw text
+text_sequences = ["hello world python", "world python rust", "python rust fast"]
+pairs, labels = sampler.process_string_sequences(text_sequences)
+
+print(f'Generated {len(pairs)} samples from text')
+print(f'First few pairs: {pairs[:3]}')
+print(f'Labels: {labels[:3]}')
 ```
 
 # Roadmap
